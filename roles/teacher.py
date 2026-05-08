@@ -103,7 +103,7 @@ def teacher_dashboard():
 
         st.header("🔍 Search Student")
 
-        key = st.text_input("Search")
+        key = st.text_input("Search by Name, Course or Enrollment No")
 
         if st.button("Search"):
 
