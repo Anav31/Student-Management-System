@@ -3,7 +3,10 @@ import sqlite3
 # ---------------- CONNECTION ----------------
 def get_connection():
     con = sqlite3.connect("SMS_DOTNET.db", check_same_thread=False)
+
+    # 🔥 This allows column-name access + dict-like rows
     con.row_factory = sqlite3.Row
+
     return con
 
 
@@ -38,22 +41,25 @@ def init_db():
         )
     """)
 
-    # ---------------- DEFAULT USERS (UPSERT LOGIC) ----------------
+    # ---------------- DEFAULT USERS ----------------
     default_users = [
         ("admin", "dotnet@2026", "Admin"),
         ("teachers", "dotnet@t2026", "Teachers")
     ]
 
     for username, password, role in default_users:
-        cur.execute("SELECT username FROM users WHERE username = ?", (username,))
-        user = cur.fetchone()
+        cur.execute(
+            "SELECT username FROM users WHERE username = ?",
+            (username,)
+        )
 
-        if user:
+        if cur.fetchone():
             cur.execute("""
                 UPDATE users
                 SET password = ?, role = ?
                 WHERE username = ?
             """, (password, role, username))
+
         else:
             cur.execute("""
                 INSERT INTO users (username, password, role)
@@ -61,7 +67,7 @@ def init_db():
             """, (username, password, role))
 
     con.commit()
-    return con, cur
+    return con
 
 
 # ---------------- AUTHENTICATION ----------------
@@ -78,3 +84,20 @@ def authenticate_user(username, password):
     con.close()
 
     return user
+
+
+# ---------------- SAFE FETCH HELPER (🔥 NEW ADDITION) ----------------
+def fetch_all_students():
+    """
+    Returns clean dictionary list (fixes missing column names issue)
+    """
+    con = get_connection()
+    cur = con.cursor()
+
+    cur.execute("SELECT * FROM student")
+    rows = cur.fetchall()
+
+    con.close()
+
+    # 🔥 Convert SQLite Row → dict (THIS FIXES YOUR COLUMN ISSUE)
+    return [dict(row) for row in rows]
