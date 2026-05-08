@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import date, datetime
+import pytz
 from db import get_connection
 from utils import *
 
@@ -8,6 +9,9 @@ def admin_dashboard():
 
     con = get_connection()
     cur = con.cursor()
+
+    # ✅ FIX TIMEZONE ISSUE (IST)
+    ist = pytz.timezone("Asia/Kolkata")
 
     st.sidebar.title("Admin Panel")
 
@@ -84,13 +88,13 @@ def admin_dashboard():
                             enrol,
                             name,
                             course,
-                            dob.strftime("%Y-%m-%d"),   # ✔ clean DOB
+                            dob.strftime("%Y-%m-%d"),
                             gender,
                             contact,
                             address,
                             email,
-                            datetime.now().strftime("%Y-%m-%d"),   # ✔ FIXED DATE
-                            datetime.now().strftime("%H:%M:%S")    # ✔ FIXED TIME
+                            datetime.now(ist).strftime("%Y-%m-%d"),   # ✔ FIXED IST DATE
+                            datetime.now(ist).strftime("%H:%M:%S")    # ✔ FIXED IST TIME
                         ))
 
                         con.commit()
@@ -109,7 +113,7 @@ def admin_dashboard():
 
         if rows:
 
-            columns = [desc[0] for desc in cur.description]  # ✔ FIX COLUMN NAMES
+            columns = [desc[0] for desc in cur.description]   # ✔ FIX COLUMN NAMES
             df = pd.DataFrame(rows, columns=columns)
 
             st.dataframe(df, use_container_width=True, hide_index=True)
@@ -137,7 +141,7 @@ def admin_dashboard():
 
             if rows:
 
-                columns = [desc[0] for desc in cur.description]  # ✔ FIX
+                columns = [desc[0] for desc in cur.description]   # ✔ FIX COLUMN NAMES
                 df = pd.DataFrame(rows, columns=columns)
 
                 st.dataframe(df, use_container_width=True, hide_index=True)

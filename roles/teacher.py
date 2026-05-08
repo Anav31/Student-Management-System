@@ -65,13 +65,13 @@ def teacher_dashboard():
                             enrol,
                             name,
                             course,
-                            dob.strftime("%Y-%m-%d"),   # ✔ clean DOB
+                            dob.strftime("%Y-%m-%d"),
                             gender,
                             contact,
                             address,
                             email,
-                            datetime.now().strftime("%Y-%m-%d"),     # ✔ correct date
-                            datetime.now().strftime("%H:%M:%S")      # ✔ correct time
+                            datetime.now().strftime("%Y-%m-%d"),   # ✔ FIXED DATE
+                            datetime.now().strftime("%H:%M:%S")     # ✔ FIXED TIME
                         ))
 
                         con.commit()
@@ -90,9 +90,7 @@ def teacher_dashboard():
 
         if rows:
 
-            # ✔ FIX COLUMN NAMES PROPERLY
-            columns = [desc[0] for desc in cur.description]
-
+            columns = [desc[0] for desc in cur.description]   # ✔ FIX COLUMN NAMES
             df = pd.DataFrame(rows, columns=columns)
 
             st.dataframe(df, use_container_width=True, hide_index=True)
@@ -120,9 +118,7 @@ def teacher_dashboard():
 
             if rows:
 
-                # ✔ FIX COLUMN NAMES HERE TOO
-                columns = [desc[0] for desc in cur.description]
-
+                columns = [desc[0] for desc in cur.description]   # ✔ FIX COLUMN NAMES
                 df = pd.DataFrame(rows, columns=columns)
 
                 st.dataframe(df, use_container_width=True, hide_index=True)
