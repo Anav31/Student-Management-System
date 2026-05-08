@@ -92,22 +92,26 @@ def admin_dashboard():
                     except Exception as e:
                         st.error(f"DB Error: {e}")
 
-    # ---------------- SHOW ----------------
+    # ---------------- SHOW STUDENTS ----------------
     elif menu == "Show Students":
-        st.header("📋 Students")
+
+        st.header("📋 Students List")
 
         cur.execute("SELECT * FROM student")
         rows = cur.fetchall()
 
         if rows:
-            st.dataframe(pd.DataFrame(rows))
+            cols = [desc[0] for desc in cur.description]
+            df = pd.DataFrame(rows, columns=cols)
+
+            st.dataframe(df, use_container_width=True, hide_index=True)
         else:
             st.warning("No data found")
 
     # ---------------- SEARCH ----------------
     elif menu == "Search Student":
 
-        st.header("🔍 Search")
+        st.header("🔍 Search Student")
 
         key = st.text_input("Search")
 
@@ -123,14 +127,16 @@ def admin_dashboard():
             rows = cur.fetchall()
 
             if rows:
-                st.dataframe(pd.DataFrame(rows))
+                cols = [desc[0] for desc in cur.description]
+                df = pd.DataFrame(rows, columns=cols)
+                st.dataframe(df, use_container_width=True, hide_index=True)
             else:
-                st.warning("No results")
+                st.warning("No results found")
 
     # ---------------- UPDATE ----------------
     elif menu == "Update Student":
 
-        st.header("✏️ Update")
+        st.header("✏️ Update Student")
 
         enrol = st.number_input("Enrollment No", step=1)
 
@@ -143,14 +149,14 @@ def admin_dashboard():
                 st.error("Student not found")
                 st.session_state.show = False
             else:
-                st.session_state.student = student
+                st.session_state.student = dict(student)   # 🔥 FIXED
                 st.session_state.show = True
 
         if st.session_state.get("show", False):
 
             s = st.session_state.student
 
-            with st.form("update"):
+            with st.form("update_form"):
 
                 name = st.text_input("Name", s["student_name"])
                 course = st.text_input("Course", s["courses"])
@@ -184,7 +190,7 @@ def admin_dashboard():
     # ---------------- DELETE ----------------
     elif menu == "Delete Student":
 
-        st.header("🗑️ Delete")
+        st.header("🗑️ Delete Student")
 
         enrol = st.number_input("Enrollment No", step=1)
 
