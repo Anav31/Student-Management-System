@@ -14,7 +14,7 @@ def teacher_dashboard():
         ["Add Student", "Show Students", "Search Student"]
     )
 
-    # ---------------- ADD ----------------
+    # ---------------- ADD STUDENT ----------------
     if menu == "Add Student":
 
         st.header("➕ Add Student")
@@ -25,8 +25,8 @@ def teacher_dashboard():
             enrol = st.number_input("Enrollment No", step=1)
             name = st.text_input("Name")
             course = st.text_input("Course")
-            dob = st.date_input("DOB", value=date(2000,1,1))
-            gender = st.selectbox("Gender", ["Male","Female","Other"])
+            dob = st.date_input("DOB", value=date(2000, 1, 1))
+            gender = st.selectbox("Gender", ["Male", "Female", "Other"])
             contact = st.text_input("Contact")
             address = st.text_area("Address")
             email = st.text_input("Email")
@@ -37,34 +37,73 @@ def teacher_dashboard():
 
                 if enrollment_exists(cur, enrol):
                     st.error("Enrollment exists")
+
                 elif not validate_mobile(contact):
                     st.error("Invalid mobile")
+
                 elif not validate_email(email):
                     st.error("Invalid email")
+
                 else:
-                    cur.execute("""
-                        INSERT INTO student VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """, (
-                        reg, enrol, name, course,
-                        str(dob), gender, contact,
-                        address, email,
-                        str(datetime.now().date()),
-                        str(datetime.now().time())
-                    ))
+                    try:
+                        cur.execute("""
+                            INSERT INTO student (
+                                registration_no,
+                                enrollment_no,
+                                student_name,
+                                courses,
+                                dob,
+                                gender,
+                                contact_no,
+                                postal_address,
+                                email_id,
+                                date_of_admission,
+                                time_of_admission
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """, (
+                            reg,
+                            enrol,
+                            name,
+                            course,
+                            dob.strftime("%Y-%m-%d"),   # ✔ clean DOB
+                            gender,
+                            contact,
+                            address,
+                            email,
+                            datetime.now().strftime("%Y-%m-%d"),     # ✔ correct date
+                            datetime.now().strftime("%H:%M:%S")      # ✔ correct time
+                        ))
 
-                    con.commit()
-                    st.success("Added successfully")
+                        con.commit()
+                        st.success("Student added successfully")
 
-    # ---------------- SHOW ----------------
+                    except Exception as e:
+                        st.error(f"DB Error: {e}")
+
+    # ---------------- SHOW STUDENTS ----------------
     elif menu == "Show Students":
 
+        st.header("📋 Students List")
+
         cur.execute("SELECT * FROM student")
-        data = cur.fetchall()
+        rows = cur.fetchall()
 
-        st.dataframe(pd.DataFrame(data))
+        if rows:
 
-    # ---------------- SEARCH ----------------
+            # ✔ FIX COLUMN NAMES PROPERLY
+            columns = [desc[0] for desc in cur.description]
+
+            df = pd.DataFrame(rows, columns=columns)
+
+            st.dataframe(df, use_container_width=True, hide_index=True)
+
+        else:
+            st.warning("No data found")
+
+    # ---------------- SEARCH STUDENT ----------------
     elif menu == "Search Student":
+
+        st.header("🔍 Search Student")
 
         key = st.text_input("Search")
 
@@ -77,7 +116,19 @@ def teacher_dashboard():
                 OR enrollment_no LIKE ?
             """, (f"%{key}%", f"%{key}%", f"%{key}%"))
 
-            st.dataframe(pd.DataFrame(cur.fetchall()))
+            rows = cur.fetchall()
+
+            if rows:
+
+                # ✔ FIX COLUMN NAMES HERE TOO
+                columns = [desc[0] for desc in cur.description]
+
+                df = pd.DataFrame(rows, columns=columns)
+
+                st.dataframe(df, use_container_width=True, hide_index=True)
+
+            else:
+                st.warning("No results found")
 
     cur.close()
     con.close()

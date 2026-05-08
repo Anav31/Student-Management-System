@@ -80,10 +80,17 @@ def admin_dashboard():
                                 time_of_admission
                             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """, (
-                            reg, enrol, name, course, str(dob), gender,
-                            contact, address, email,
-                            str(datetime.now().date()),
-                            str(datetime.now().time())
+                            reg,
+                            enrol,
+                            name,
+                            course,
+                            dob.strftime("%Y-%m-%d"),   # ✔ clean DOB
+                            gender,
+                            contact,
+                            address,
+                            email,
+                            datetime.now().strftime("%Y-%m-%d"),   # ✔ FIXED DATE
+                            datetime.now().strftime("%H:%M:%S")    # ✔ FIXED TIME
                         ))
 
                         con.commit()
@@ -102,9 +109,7 @@ def admin_dashboard():
 
         if rows:
 
-            # 🔥 FORCE COLUMN NAMES FROM CURSOR
-            columns = [desc[0] for desc in cur.description]
-
+            columns = [desc[0] for desc in cur.description]  # ✔ FIX COLUMN NAMES
             df = pd.DataFrame(rows, columns=columns)
 
             st.dataframe(df, use_container_width=True, hide_index=True)
@@ -132,7 +137,7 @@ def admin_dashboard():
 
             if rows:
 
-                columns = [desc[0] for desc in cur.description]
+                columns = [desc[0] for desc in cur.description]  # ✔ FIX
                 df = pd.DataFrame(rows, columns=columns)
 
                 st.dataframe(df, use_container_width=True, hide_index=True)
