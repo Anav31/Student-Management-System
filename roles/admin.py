@@ -2,21 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import date, datetime
 from db import get_connection
-import re
-
-
-# ---------------- VALIDATION FUNCTIONS ----------------
-
-def validate_mobile(contact):
-    return contact.isdigit() and len(contact) == 10
-
-
-def validate_email(email):
-    pattern = r"^[\w\.-]+@[\w\.-]+\.\w+$"
-    return re.match(pattern, email)
-
-
-# ---------------- MAIN DASHBOARD ----------------
+from utils import *
 
 def admin_dashboard():
 
@@ -37,11 +23,9 @@ def admin_dashboard():
 
         with st.form("add_form"):
 
-            reg = st.text_input("Registration No").strip()
-
-            enrol = st.number_input("Enrollment No", min_value=1, step=1)
-
-            name = st.text_input("Student Name").strip()
+            reg = st.text_input("Registration No")
+            enrol = st.number_input("Enrollment No", step=1)
+            name = st.text_input("Student Name")
 
             course = st.selectbox(
                 "Course",
@@ -56,227 +40,164 @@ def admin_dashboard():
             )
 
             gender = st.selectbox("Gender", ["Male", "Female", "Other"])
-
             contact = st.text_input("Contact")
-
-            address = st.text_area("Address").strip()
-
-            email = st.text_input("Email").strip()
+            address = st.text_area("Address")
+            email = st.text_input("Email")
 
             submitted = st.form_submit_button("Add Student")
 
             if submitted:
 
                 if not reg or not name or not contact or not address or not email:
-                    st.error("⚠️ Please fill all required fields")
+                    st.error("⚠️ All fields required")
+
+                elif not validate_enrollment(enrol):
+                    st.error("❌ Invalid Enrollment Number")
 
                 elif not validate_mobile(contact):
-                    st.error("❌ Mobile number must be exactly 10 digits")
+                    st.error("❌ Mobile must be 10 digits")
 
                 elif not validate_email(email):
-                    st.error("❌ Invalid email address")
+                    st.error("❌ Invalid email")
+
+                elif enrollment_exists(cur, enrol):
+                    st.error("❌ Enrollment already exists")
 
                 else:
                     try:
-
-                        cur.execute(
-                            "SELECT * FROM student WHERE enrollment_no=%s",
-                            (enrol,)
-                        )
-
-                        if cur.fetchone():
-                            st.error(f"❌ Student with Enrollment No {enrol} already exists")
-
-                        else:
-                            cur.execute("""
-                                INSERT INTO student VALUES
-                                (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                            """, (
-                                reg,
-                                enrol,
-                                name,
-                                course,
+                        cur.execute("""
+                            INSERT INTO student (
+                                registration_no,
+                                enrollment_no,
+                                student_name,
+                                courses,
                                 dob,
                                 gender,
-                                contact,
-                                address,
-                                email,
-                                datetime.now().date(),
-                                datetime.now().time()
-                            ))
+                                contact_no,
+                                postal_address,
+                                email_id,
+                                date_of_admission,
+                                time_of_admission
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """, (
+                            reg, enrol, name, course, str(dob), gender,
+                            contact, address, email,
+                            str(datetime.now().date()),
+                            str(datetime.now().time())
+                        ))
 
-                            con.commit()
-                            st.success("✅ Student added successfully")
+                        con.commit()
+                        st.success("✅ Student added successfully")
 
                     except Exception as e:
-                        st.error(f"Database Error: {e}")
+                        st.error(f"DB Error: {e}")
 
-    # ---------------- SHOW STUDENTS ----------------
+    # ---------------- SHOW ----------------
     elif menu == "Show Students":
+        st.header("📋 Students")
 
-        st.header("📋 All Students")
+        cur.execute("SELECT * FROM student")
+        rows = cur.fetchall()
 
-        try:
-            cur.execute("SELECT * FROM student")
-            rows = cur.fetchall()
+        if rows:
+            st.dataframe(pd.DataFrame(rows))
+        else:
+            st.warning("No data found")
 
-            if rows:
-                st.dataframe(pd.DataFrame(rows), use_container_width=True)
-            else:
-                st.warning("⚠️ No student records found")
-
-        except Exception as e:
-            st.error(f"Error: {e}")
-
-    # ---------------- SEARCH STUDENT ----------------
+    # ---------------- SEARCH ----------------
     elif menu == "Search Student":
 
-        st.header("🔍 Search Student")
+        st.header("🔍 Search")
 
-        key = st.text_input("Name / Course / Enrollment").strip()
+        key = st.text_input("Search")
 
         if st.button("Search"):
 
-            if not key:
-                st.warning("⚠️ Enter search value")
+            cur.execute("""
+                SELECT * FROM student
+                WHERE student_name LIKE ?
+                OR courses LIKE ?
+                OR enrollment_no LIKE ?
+            """, (f"%{key}%", f"%{key}%", f"%{key}%"))
 
+            rows = cur.fetchall()
+
+            if rows:
+                st.dataframe(pd.DataFrame(rows))
             else:
-                try:
-                    cur.execute("""
-                        SELECT * FROM student
-                        WHERE student_name LIKE %s
-                        OR courses LIKE %s
-                        OR CAST(enrollment_no AS CHAR) LIKE %s
-                    """, (f"%{key}%", f"%{key}%", f"%{key}%"))
+                st.warning("No results")
 
-                    rows = cur.fetchall()
-
-                    if rows:
-                        st.dataframe(pd.DataFrame(rows))
-                    else:
-                        st.warning("⚠️ No student found")
-
-                except Exception as e:
-                    st.error(f"Search Error: {e}")
-
-    # ---------------- UPDATE STUDENT ----------------
+    # ---------------- UPDATE ----------------
     elif menu == "Update Student":
 
-        st.header("✏️ Update Student")
+        st.header("✏️ Update")
 
-        course_list = [
-            "PDDM + AI",
-            "PDEAB + AI",
-            "PDGD + AI",
-            "ADCA + AI",
-            "ADFA + AI",
-            "ADOA + AI"
-        ]
-
-        enrol = st.number_input("Enrollment No", min_value=1, step=1)
+        enrol = st.number_input("Enrollment No", step=1)
 
         if st.button("Fetch"):
 
-            try:
-                cur.execute(
-                    "SELECT * FROM student WHERE enrollment_no=%s",
-                    (enrol,)
-                )
+            cur.execute("SELECT * FROM student WHERE enrollment_no = ?", (enrol,))
+            student = cur.fetchone()
 
-                student = cur.fetchone()
+            if not student:
+                st.error("Student not found")
+                st.session_state.show = False
+            else:
+                st.session_state.student = student
+                st.session_state.show = True
 
-                if not student:
-                    st.error("❌ Student not found")
-                    st.session_state.show_form = False
-                else:
-                    st.session_state.student = student
-                    st.session_state.show_form = True
+        if st.session_state.get("show", False):
 
-            except Exception as e:
-                st.error(f"Fetch Error: {e}")
+            s = st.session_state.student
 
-        if st.session_state.get("show_form", False):
+            with st.form("update"):
 
-            student = st.session_state.student
+                name = st.text_input("Name", s["student_name"])
+                course = st.text_input("Course", s["courses"])
+                contact = st.text_input("Contact", s["contact_no"])
+                address = st.text_area("Address", s["postal_address"])
+                email = st.text_input("Email", s["email_id"])
 
-            db_course = student["courses"]
+                submit = st.form_submit_button("Update")
 
-            course_index = course_list.index(db_course) if db_course in course_list else 0
+                if submit:
 
-            with st.form("update_form"):
-
-                name = st.text_input("Name", student["student_name"]).strip()
-
-                course = st.selectbox("Course", course_list, index=course_index)
-
-                contact = st.text_input("Contact", student["contact_no"])
-
-                address = st.text_area("Address", student["postal_address"]).strip()
-
-                email = st.text_input("Email", student["email_id"]).strip()
-
-                submitted = st.form_submit_button("Update")
-
-                if submitted:
-
-                    if not name or not contact or not address or not email:
-                        st.error("⚠️ All fields required")
-
-                    elif not validate_mobile(contact):
-                        st.error("❌ Mobile must be 10 digits")
-
+                    if not validate_mobile(contact):
+                        st.error("Invalid mobile")
                     elif not validate_email(email):
-                        st.error("❌ Invalid email")
-
+                        st.error("Invalid email")
                     else:
-                        try:
-                            cur.execute("""
-                                UPDATE student SET
-                                student_name=%s,
-                                courses=%s,
-                                contact_no=%s,
-                                postal_address=%s,
-                                email_id=%s
-                                WHERE enrollment_no=%s
-                            """, (name, course, contact, address, email, enrol))
+                        cur.execute("""
+                            UPDATE student SET
+                            student_name=?,
+                            courses=?,
+                            contact_no=?,
+                            postal_address=?,
+                            email_id=?
+                            WHERE enrollment_no=?
+                        """, (name, course, contact, address, email, enrol))
 
-                            con.commit()
+                        con.commit()
+                        st.success("Updated successfully")
+                        st.session_state.show = False
 
-                            st.success("✅ Updated successfully")
-                            st.session_state.show_form = False
-
-                        except Exception as e:
-                            st.error(f"Update Error: {e}")
-
-    # ---------------- DELETE STUDENT ----------------
+    # ---------------- DELETE ----------------
     elif menu == "Delete Student":
 
-        st.header("🗑️ Delete Student")
+        st.header("🗑️ Delete")
 
-        enrol = st.number_input("Enrollment No", min_value=1, step=1)
+        enrol = st.number_input("Enrollment No", step=1)
 
         if st.button("Delete"):
 
-            try:
-                cur.execute(
-                    "SELECT * FROM student WHERE enrollment_no=%s",
-                    (enrol,)
-                )
+            cur.execute("SELECT 1 FROM student WHERE enrollment_no = ?", (enrol,))
 
-                if not cur.fetchone():
-                    st.error("❌ Student does not exist")
-
-                else:
-                    cur.execute(
-                        "DELETE FROM student WHERE enrollment_no=%s",
-                        (enrol,)
-                    )
-
-                    con.commit()
-                    st.success("✅ Deleted successfully")
-
-            except Exception as e:
-                st.error(f"Delete Error: {e}")
+            if not cur.fetchone():
+                st.error("Student not found")
+            else:
+                cur.execute("DELETE FROM student WHERE enrollment_no = ?", (enrol,))
+                con.commit()
+                st.success("Deleted successfully")
 
     cur.close()
     con.close()
