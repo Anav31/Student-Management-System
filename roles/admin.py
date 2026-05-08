@@ -101,14 +101,18 @@ def admin_dashboard():
         rows = cur.fetchall()
 
         if rows:
-            cols = [desc[0] for desc in cur.description]
-            df = pd.DataFrame(rows, columns=cols)
+
+            # 🔥 FORCE COLUMN NAMES FROM CURSOR
+            columns = [desc[0] for desc in cur.description]
+
+            df = pd.DataFrame(rows, columns=columns)
 
             st.dataframe(df, use_container_width=True, hide_index=True)
+
         else:
             st.warning("No data found")
 
-    # ---------------- SEARCH ----------------
+    # ---------------- SEARCH STUDENT ----------------
     elif menu == "Search Student":
 
         st.header("🔍 Search Student")
@@ -127,13 +131,16 @@ def admin_dashboard():
             rows = cur.fetchall()
 
             if rows:
-                cols = [desc[0] for desc in cur.description]
-                df = pd.DataFrame(rows, columns=cols)
+
+                columns = [desc[0] for desc in cur.description]
+                df = pd.DataFrame(rows, columns=columns)
+
                 st.dataframe(df, use_container_width=True, hide_index=True)
+
             else:
                 st.warning("No results found")
 
-    # ---------------- UPDATE ----------------
+    # ---------------- UPDATE STUDENT ----------------
     elif menu == "Update Student":
 
         st.header("✏️ Update Student")
@@ -149,7 +156,7 @@ def admin_dashboard():
                 st.error("Student not found")
                 st.session_state.show = False
             else:
-                st.session_state.student = dict(student)   # 🔥 FIXED
+                st.session_state.student = dict(student)
                 st.session_state.show = True
 
         if st.session_state.get("show", False):
@@ -169,9 +176,11 @@ def admin_dashboard():
                 if submit:
 
                     if not validate_mobile(contact):
-                        st.error("Invalid mobile")
+                        st.error("Invalid mobile number")
+
                     elif not validate_email(email):
                         st.error("Invalid email")
+
                     else:
                         cur.execute("""
                             UPDATE student SET
@@ -187,7 +196,7 @@ def admin_dashboard():
                         st.success("Updated successfully")
                         st.session_state.show = False
 
-    # ---------------- DELETE ----------------
+    # ---------------- DELETE STUDENT ----------------
     elif menu == "Delete Student":
 
         st.header("🗑️ Delete Student")
