@@ -79,7 +79,7 @@ def login_page():
             cur = con.cursor()
 
             cur.execute(
-                "SELECT role FROM users WHERE username=%s AND password=%s",
+                "SELECT role FROM users WHERE username=? AND password=?",
                 (username, password)
             )
 
