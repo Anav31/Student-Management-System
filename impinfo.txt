@@ -1,0 +1,5 @@
+MySQLHost- mysql.railway.internal
+MySQLUser-root
+MySQLPassword-qbJmogkFEfsZNmqXJGECIZzQizTlyCFh
+MySQLDatabase-railway
+MySQLPort-3306
